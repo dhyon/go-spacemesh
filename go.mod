@@ -26,13 +26,12 @@ require (
 	github.com/spf13/viper v1.3.1
 	github.com/stretchr/testify v1.3.0
 	github.com/syndtr/goleveldb v0.0.0-20181128100959-b001fa50d6b2
-	github.com/wasmerio/go-ext-wasm v0.0.0-20190604100342-08147f5650b1
+	github.com/wasmerio/go-ext-wasm v0.0.0-20190605130836-4cbc5b059da3
 	go.uber.org/atomic v1.4.0 // indirect
 	go.uber.org/zap v1.9.1
 	golang.org/x/crypto v0.0.0-20190131182504-b8fe1690c613
 	golang.org/x/net v0.0.0-20190206173232-65e2d4e15006
 	golang.org/x/sync v0.0.0-20181221193216-37e7f081c4d4
-	google.golang.org/genproto v0.0.0-20181221175505-bd9b4fb69e2f
 	google.golang.org/grpc v1.19.0
 	gopkg.in/natefinch/lumberjack.v2 v2.0.0
 )

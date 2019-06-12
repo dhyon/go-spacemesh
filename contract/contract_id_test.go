@@ -5,6 +5,12 @@ import (
 	"testing"
 )
 
+func Test_ContractId_CalcContractId_Must_Not_Be_Empty(t *testing.T) {
+	assert.Panics(t, func() {
+		CalcContractId([]byte{})
+	})
+}
+
 func Test_ContractId_CalcContractId_Is_Deterministic(t *testing.T) {
 	code := []byte{0xAB, 0xAB, 0xAB}
 

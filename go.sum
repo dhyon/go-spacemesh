@@ -163,6 +163,8 @@ github.com/ugorji/go/codec v0.0.0-20181204163529-d75b2dcb6bc8/go.mod h1:VFNgLljT
 github.com/urfave/cli v1.20.0/go.mod h1:70zkFmudgCuE/ngEzBv17Jvp/497gISqfk5gWijbERA=
 github.com/wasmerio/go-ext-wasm v0.0.0-20190604100342-08147f5650b1 h1:a2/MTVJ1bwkCdM+8pJ2gR/hRuZhyhog6S7Ud78Ft2NA=
 github.com/wasmerio/go-ext-wasm v0.0.0-20190604100342-08147f5650b1/go.mod h1:B0C/D0a2vNos7Y3IxQhMpGOY9PCuCKfLvfry33a1cKA=
+github.com/wasmerio/go-ext-wasm v0.0.0-20190605130836-4cbc5b059da3 h1:HgSwX5fLQtJVDtEDeQwItlGZbCN0OfwYky8LeXLThEs=
+github.com/wasmerio/go-ext-wasm v0.0.0-20190605130836-4cbc5b059da3/go.mod h1:B0C/D0a2vNos7Y3IxQhMpGOY9PCuCKfLvfry33a1cKA=
 github.com/xordataexchange/crypt v0.0.3-0.20170626215501-b2862e3d0a77/go.mod h1:aYKd//L2LvnjZzWKhF00oedf4jCCReLcmhLdhm1A27Q=
 go.uber.org/atomic v1.3.2 h1:2Oa65PReHzfn29GpvgsYwloV9AVFHPDk8tYxt2c2tr4=
 go.uber.org/atomic v1.3.2/go.mod h1:gD2HeocX3+yG+ygLZcrzQJaqmWj9AIm7n08wl/qW/PE=

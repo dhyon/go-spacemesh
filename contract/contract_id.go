@@ -1,12 +1,18 @@
 package contract
 
 import (
-	"github.com/spacemeshos/go-spacemesh/common"
+	"github.com/spacemeshos/go-spacemesh/address"
 	"github.com/spacemeshos/go-spacemesh/crypto"
 )
 
-type ContractId = common.Hash
+type ContractId = address.Address
 
 func CalcContractId(code []byte) ContractId {
-	return crypto.Keccak256Hash(code)
+	if len(code) == 0 {
+		panic("code must not be empty")
+	}
+
+	bytes := crypto.Keccak256(code)
+
+	return address.BytesToAddress(bytes)
 }
