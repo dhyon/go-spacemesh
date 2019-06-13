@@ -13,6 +13,7 @@ import (
 	"math/big"
 	wasm "github.com/wasmerio/go-ext-wasm/wasmer"
 
+	"github.com/spacemeshos/go-spacemesh/common"
 	"github.com/spacemeshos/go-spacemesh/state"
 	"github.com/spacemeshos/go-spacemesh/types"
 	"github.com/spacemeshos/go-spacemesh/address"
@@ -87,24 +88,59 @@ func unwrapDataAndMemory(vmctx unsafe.Pointer) (*VM, *wasm.Memory) {
 	return vm, mem
 }
 
-// func DeployContract() {
-// }
+func allocateFuncArgs(ctx *Context, instance *wasm.Instance) ([]interface{}, error) {
+	allocateFunc := instance.Exports["Allocate"]
 
-func buildFuncArgs(ctx *Context, memory *wasm.Memory) []interface{} {
-	res := []interface{}{}
+	if allocateFunc == nil {
+		return []interface{}{}, fmt.Errorf("Couldn't find exported function `Allocate`")
+	}
 
+	// TODO: calculate `nargs`
+	nargs := 4
+	args := make([]interface{}, nargs, nargs)
+
+	// allocate the `sender` address first
+	res, err := allocateFunc(common.AddressLength)
+	if err != nil {
+		return nil, err
+	}
+
+	args[0] = (interface{})(res.ToI32())
+
+	// allocating the args given in `ctx.Args`
+	i := 1
 	for _, arg := range ctx.Args {
 		switch arg.(type) {
 		case address.Address:
-			fmt.Println("address.Address")
+			res, err := allocateFunc(common.AddressLength)
+
+			if err != nil {
+				return nil, err
+			}
+
+			args[i] = (interface{})(res.ToI32())
+			i += 1
 		case *big.Int:
-			fmt.Println("big.Int")
+			bigNum := arg.(*big.Int)
+			bigIntAsBytes := bigNum.Bytes()
+			bigIntSize := len(bigIntAsBytes)
+
+			res, err := allocateFunc(bigIntSize)
+
+			if err != nil {
+				return nil, err
+			}
+
+			args[i] = (interface{})(res.ToI32())
+			args[i + 1] = bigIntSize
+			i += 2
 		default:
 			fmt.Println("unknown")
+			i += 1
 		}
 	}
 
-	return res
+	return args, nil
 }
 
 func ExecuteContract(vm *VM, registry ContractRegistry, ctx *Context) (*types.ExecutionReceipt, error) {
@@ -120,25 +156,31 @@ func ExecuteContract(vm *VM, registry ContractRegistry, ctx *Context) (*types.Ex
 	imports, _ = imports.Append("sm_vm_get_balance", sm_vm_get_balance, C.sm_vm_get_balance)
 	imports, _ = imports.Append("sm_vm_set_balance", sm_vm_set_balance, C.sm_vm_set_balance)
 	instance, err := wasm.NewInstanceWithImports(contract.Code, imports)
+	defer instance.Close()
 
 	instance.SetContextData(unsafe.Pointer(vm))
-	defer instance.Close()
 
 	if err != nil {
 		receipt := types.NewExecutionReceipt(false, gas.InstanceInitFailed)
 		return receipt, err
 	}
 
-	exported_func := instance.Exports[ctx.Function]
+	exportedFunc := instance.Exports[ctx.Function]
 
-	if exported_func == nil {
+	if exportedFunc == nil {
 		err := fmt.Errorf("Couldn't find exported function `%s`", ctx.Function)
 		receipt := types.NewExecutionReceipt(false, gas.ExportFunctionNotFound)
 		return receipt, err
 	}
 
-	args := buildFuncArgs(ctx, &instance.Memory)
-	_, err = exported_func(args...)
+	args, err := allocateFuncArgs(ctx, &instance)
+
+	if err != nil {
+		receipt := types.NewExecutionReceipt(false, gas.ExportFunctionArgsAllocationFailed)
+		return receipt, err
+	}
+
+	_, err = exportedFunc(args...)
 
 	if err == nil {
 		receipt := types.NewExecutionReceipt(true, vm.gasUsed)

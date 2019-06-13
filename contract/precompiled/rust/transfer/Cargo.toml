@@ -12,3 +12,6 @@ crate-type = ["cdylib"]
 panic = "abort"
 opt-level = "z"
 debug = false
+
+[dependencies]
+wee_alloc = { version = "0.4.4", default-features = true }
