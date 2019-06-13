@@ -13,6 +13,10 @@ import (
 	"github.com/spacemeshos/go-spacemesh/address"
 )
 
+func setupContractsRegistry() ContractRegistry {
+	return NewInMemoryContractRegistry()
+}
+
 func setupVM() *VM {
 	var innerdb database.Database = database.NewMemDatabase()
 	var db state.Database = state.NewDatabase(innerdb)
@@ -22,9 +26,7 @@ func setupVM() *VM {
 		panic(err)
 	}
 
-	registry := NewInMemoryContractRegistry()
-
-	return NewVM(state, registry)
+	return NewVM(state)
 }
 
 func createCtx(function string, contract *Contract, sender *address.Address, amount *big.Int) *Context {
@@ -38,7 +40,7 @@ func createCtx(function string, contract *Contract, sender *address.Address, amo
 	return &ctx
 }
 
-func storeContractCode(vm *VM, name string) *ContractId {
+func storeContractCode(registry ContractRegistry, name string) *ContractId {
 	path := path.Join("./precompiled/wasm", name)
 	code, err := ioutil.ReadFile(path)
 
@@ -54,23 +56,46 @@ func storeContractCode(vm *VM, name string) *ContractId {
 		Code: code,
 	}
 
-	vm.Registry.AddContract(&contract)
+	registry.AddContract(&contract)
 
 	return contractId
 }
 
-func Test_VM_Nop_Contract(t *testing.T) {
-	vm := setupVM()
-	contractId := storeContractCode(vm, "nop_contract.wasm")
+func loadTestContract(t *testing.T, registry ContractRegistry, name string) *Contract {
+	contractId := storeContractCode(registry, name)
 
-	contract, err := vm.Registry.GetContractById(contractId)
+	contract, err := registry.GetContractById(contractId)
 
 	assert.Nil(t, err)
 
-	sender := address.HexToAddress("0xAABBCCDD")
-	amount := new(big.Int)
+	return contract
+}
 
-	ctx := createCtx("Execute", contract, &sender, amount)
+// func Test_VM_Nop_Contract(t *testing.T) {
+// 	vm := setupVM()
+// 	registry := setupContractsRegistry()
+// 	contract := loadTestContract(t, registry, "nop_contract.wasm")
+//
+// 	sender := address.HexToAddress("0xabcd")
+// 	amount := new(big.Int)
+//
+// 	ctx := createCtx("Execute", contract, &sender, amount)
+//
+// 	ExecuteContract(vm, registry, ctx)
+// }
 
-	vm.Execute(ctx)
+func Test_VM_Transfer_Contract(t *testing.T) {
+ 	vm := setupVM()
+  	registry := setupContractsRegistry()
+  	contract := loadTestContract(t, registry, "transfer_contract.wasm")
+
+ 	sender := address.HexToAddress("0xAAAA")
+ 	amount := big.NewInt(10203040)
+
+ 	ctx := createCtx("Transfer", contract, &sender, amount)
+
+ 	recipient := address.HexToAddress("0xBBBB")
+	ctx.Args = []interface{}{recipient, amount}
+
+	ExecuteContract(vm, registry, ctx)
 }
