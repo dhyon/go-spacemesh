@@ -13,7 +13,7 @@ func Test_ContractRegistry_AddContract_AndThen_GetContract(t *testing.T) {
 	registry := NewInMemoryContractRegistry()
 	registry.AddContract(contract)
 
-	contract_ := registry.GetContractById(&id)
+	contract_, _ := registry.GetContractById(id)
 
 	assert.Equal(t, contract, contract_)
 }
@@ -33,8 +33,8 @@ func Test_ContractRegistry_With_Two_Different_Contracts(t *testing.T) {
 	registry.AddContract(contract1)
 	registry.AddContract(contract2)
 
-	contract1_ := registry.GetContractById(&id1)
-	contract2_ := registry.GetContractById(&id2)
+	contract1_, _ := registry.GetContractById(id1)
+	contract2_, _ := registry.GetContractById(id2)
 
 	assert.Equal(t, contract1, contract1_)
 	assert.Equal(t, contract2, contract2_)

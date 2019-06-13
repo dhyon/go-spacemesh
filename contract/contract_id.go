@@ -7,12 +7,13 @@ import (
 
 type ContractId = address.Address
 
-func CalcContractId(code []byte) ContractId {
+func CalcContractId(code []byte) *ContractId {
 	if len(code) == 0 {
 		panic("code must not be empty")
 	}
 
 	bytes := crypto.Keccak256(code)
 
-	return address.BytesToAddress(bytes)
+	id := address.BytesToAddress(bytes)
+	return &id
 }

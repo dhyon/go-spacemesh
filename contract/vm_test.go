@@ -4,7 +4,7 @@ import (
 	"path"
 	"io/ioutil"
 	"math/big"
-	// "github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/assert"
 	"testing"
 
 	"github.com/spacemeshos/go-spacemesh/common"
@@ -30,7 +30,7 @@ func setupVM() *VM {
 func createCtx(function string, contract *Contract, sender *address.Address, amount *big.Int) *Context {
 	ctx := Context {
 		Function:	function,
-		ContractId: &contract.Id,
+		ContractId: contract.Id,
 		Sender:		sender,
 		Amount:		amount,
 	}
@@ -56,21 +56,21 @@ func storeContractCode(vm *VM, name string) *ContractId {
 
 	vm.Registry.AddContract(&contract)
 
-	return &contractId
+	return contractId
 }
 
-func Test_VM_Stateless_Contract(t *testing.T) {
+func Test_VM_Nop_Contract(t *testing.T) {
 	vm := setupVM()
-	contractId := storeContractCode(vm, "sm_transfer.wast")
+	contractId := storeContractCode(vm, "nop_contract.wasm")
 
-	contract := vm.Registry.GetContractById(contractId)
+	contract, err := vm.Registry.GetContractById(contractId)
 
-	function := "transfer"
-	amount := new(big.Int)
-	amount.SetString("1234", 10)
+	assert.Nil(t, err)
 
 	sender := address.HexToAddress("0xAABBCCDD")
-	ctx := createCtx(function, contract, &sender, amount)
+	amount := new(big.Int)
+
+	ctx := createCtx("Execute", contract, &sender, amount)
 
 	vm.Execute(ctx)
 }
