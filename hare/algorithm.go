@@ -519,7 +519,7 @@ func (proc *ConsensusProcess) processNotifyMsg(msg *Msg) {
 	// enough notifications, should terminate
 	proc.s = s // update to the agreed set
 	proc.With().Info("Consensus process terminated", log.String("set_values", proc.s.String()),
-		log.Uint64("layer_id", uint64(proc.instanceId)))
+		log.Uint64("layer_id", uint64(proc.instanceId)), log.Int32("last_round", proc.k))
 	proc.terminationReport <- procOutput{proc.instanceId, proc.s}
 	proc.Close()
 	proc.terminating = true // ensures immediate termination
