@@ -249,12 +249,16 @@ func (b *Builder) PublishActivationTx(epoch types.EpochId) (bool, error) {
 		b.log.Warning("empty active set size found! len(view): %d, view: %v", len(atx.View), atx.View)
 		return false, nil
 	}
+
 	if !atx.TargetEpoch(b.layersPerEpoch).IsGenesis() {
 		if activeSetSize != atx.ActiveSetSize {
 			b.log.Panic("active set size mismatch! size based on view: %d, size reported: %d",
 				activeSetSize, atx.ActiveSetSize)
 		}
+	} else {
+		atx.ActiveSetSize = activeSetSize
 	}
+
 	buf, err := types.AtxAsBytes(atx)
 	if err != nil {
 		return false, err
