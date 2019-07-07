@@ -97,12 +97,13 @@ func (suite *AppTestSuite) initMultipleInstances(numOfInstances int, storeFormat
 		smApp := NewSpacemeshApp()
 		smApp.Config.HARE.N = numOfInstances
 		smApp.Config.HARE.F = numOfInstances / 2
-		smApp.Config.HARE.RoundDuration = 3
+		smApp.Config.HARE.RoundDuration = 10
 		smApp.Config.HARE.WakeupDelta = 10
 		smApp.Config.HARE.ExpectedLeaders = 5
 		smApp.Config.CoinbaseAccount = strconv.Itoa(i + 1)
 		smApp.Config.LayerAvgSize = numOfInstances
 		smApp.Config.LayersPerEpoch = 3
+		smApp.Config.LayerDurationSec = 90
 
 		edSgn := signing.NewEdSigner()
 		pub := edSgn.PublicKey()
@@ -157,7 +158,7 @@ func (suite *AppTestSuite) TestMultipleNodes() {
 	}
 	txbytes, _ := types.SignedTransactionAsBytes(tx)
 	path := "../tmp/test/state_" + time.Now().String()
-	suite.initMultipleInstances(5, path)
+	suite.initMultipleInstances(30, path)
 	for _, a := range suite.apps {
 		a.startServices()
 	}
@@ -165,7 +166,7 @@ func (suite *AppTestSuite) TestMultipleNodes() {
 	defer suite.gracefulShutdown()
 
 	_ = suite.apps[0].P2P.Broadcast(miner.IncomingTxProtocol, txbytes)
-	timeout := time.After(4.5 * 60 * time.Second)
+	timeout := time.After(30 * 60 * time.Second)
 
 	stickyClientsDone := 0
 loop:
