@@ -205,9 +205,10 @@ func (nb *NIPSTBuilder) BuildNIPST(challenge *common.Hash) (*types.NIPST, error)
 
 	// Phase 1: receive proofs from PoET service
 	if nb.state.PoetProofRef == nil {
+		nb.log.With().Info("Subscribing to poet ref", log.String("poetID", hex.EncodeToString(nb.state.PoetId[:])), log.Uint64("poet_round", nb.state.PoetRound.Id))
 		proofRefChan := nb.poetDb.SubscribeToProofRef(nb.state.PoetId, nb.state.PoetRound.Id)
 		poetProofRef := <-proofRefChan // TODO(noamnelke): handle timeout
-
+		nb.log.With().Info("Got poet ref!", log.String("poetID", hex.EncodeToString(nb.state.PoetId[:])), log.Uint64("poet_round", nb.state.PoetRound.Id))
 		membership, err := nb.poetDb.GetMembershipMap(poetProofRef)
 		if err != nil {
 			log.Panic("failed to fetch membership for PoET proof")              // TODO: handle inconsistent state
