@@ -114,7 +114,7 @@ func (validator *syntaxContextValidator) ContextuallyValidateMessage(m *Msg, exp
 		return true
 	}
 
-	validator.Info("Contextual validation failed: not same iteration. Expected: %v, Actual: %v", expectedK, m.InnerMsg.K)
+	validator.Debug("Contextual validation failed: not same iteration. Expected: %v, Actual: %v", expectedK, m.InnerMsg.K)
 	return false
 }
 

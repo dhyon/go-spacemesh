@@ -116,7 +116,7 @@ func (b *Broker) eventLoop() {
 			msgInstId := InstanceId(hareMsg.InnerMsg.InstanceId)
 			state, exist := b.layerState[msgInstId]
 			if exist && state == invalid { // invalid instance, ignore
-				b.Info("%v instance is invalid. Ignoring message", msgInstId)
+				b.Debug("%v instance is invalid. Ignoring message", msgInstId)
 				continue
 			}
 
