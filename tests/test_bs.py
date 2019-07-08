@@ -422,19 +422,21 @@ def test_mining(setup_network):
     data = '{"address":"0000000000000000000000000000000000002222"}'
     end = start = time.time()
 
-    layer_avg_size = testconfig['client']['args']['layer-average-size']
+    layer_avg_size = int(testconfig['client']['args']['layer-average-size'])
     layers_per_epoch = int(testconfig['client']['args']['layers-per-epoch'])
-    # check only third epoch
-    epochs = 3
-    last_layer = epochs*layers_per_epoch
-
-    queries.wait_for_latest_layer(testconfig["namespace"], last_layer)
-    print("test took {:.3f} seconds ".format(end - start))
-
     total_pods = len(setup_network.clients.pods) + len(setup_network.bootstrap.pods)
-    analyse.analyze_mining(testconfig['namespace'], last_layer, layers_per_epoch, layer_avg_size, total_pods)
 
-    validate_hare(current_index, ns)  # validate hare
+    # note: runs forever until assert is false
+    # checks every epoch layer. 12 is the first one (3*4) assuming layersperepoch is 4
+    epochs = 3
+    while True:
+        epoch_layer = epochs*layers_per_epoch
+        queries.wait_for_latest_layer(testconfig["namespace"], epoch_layer)
+        time.sleep(60 * 60)
+        analyse.analyze_mining(testconfig['namespace'], epoch_layer, layers_per_epoch, layer_avg_size, total_pods)
+        validate_hare(current_index, ns)  # validate hare
+        epochs += 1
+        print("Asserts passed on layer {0} YAY! ".format(epoch_layer))
 
 
 ''' todo: when atx flow stabilized re enable this test

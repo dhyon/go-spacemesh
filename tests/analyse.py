@@ -16,6 +16,9 @@ def analyze_mining(deployment, last_layer, layers_per_epoch, layer_avg_size, tot
     xl = [len(layermap[str(x)]) for x in range(layers_per_epoch) if str(x) in layermap]
     print(str(xl))
 
+    epochs = [sum([len(layermap[str(x)]), len(layermap[str(x-1)]), len(layermap[str(x-2)]), len(layermap[str(x-3)])]) for x in range(last_layer) if x > 3 and x % 4 == 3]
+    print([{ "epoch": k, "sum": v } for k,v in enumerate(epochs)])
+
     first_epoch_blocks = sum(xl)
 
     # count all blocks arrived in relevant layers
