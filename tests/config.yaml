@@ -10,13 +10,13 @@ deployment_ready_time_out: 120
 config_path: '../config.toml'
 
 bootstrap:
-  image: 'spacemeshos/go-spacemesh:develop'
+  image: 'spacemeshos/go-spacemesh:poet_fix_ondev'
   command: '/bin/go-spacemesh'
   replicas: 1
   args:
     randcon: '8'
-    hare-committee-size: '60'
-    hare-max-adversaries: '29'
+    hare-committee-size: '50'
+    hare-max-adversaries: '24'
     hare-round-duration-sec: '30'
     layer-duration-sec: '180'
     layer-average-size: '60'
@@ -24,13 +24,13 @@ bootstrap:
     layers-per-epoch: '4'
     coinbase: '0x4321'
 client:
-  image: 'spacemeshos/go-spacemesh:develop'
+  image: 'spacemeshos/go-spacemesh:poet_fix_ondev'
   command: '/bin/go-spacemesh'
   replicas: 59
   args:
     randcon: '8'
-    hare-committee-size: '60'
-    hare-max-adversaries: '29'
+    hare-committee-size: '50'
+    hare-max-adversaries: '24'
     hare-round-duration-sec: '30'
     layer-duration-sec: '180'
     layer-average-size: '60'
@@ -38,6 +38,6 @@ client:
     layers-per-epoch: '4'
     coinbase: '0x1234'
 elastic:
-  host: elastic.spacemesh.io
+  host: elastic-alpha.spacemesh.io
   port: 9200
   username: spacemesh

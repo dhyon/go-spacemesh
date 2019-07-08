@@ -432,7 +432,6 @@ def test_mining(setup_network):
     while True:
         epoch_layer = epochs*layers_per_epoch
         queries.wait_for_latest_layer(testconfig["namespace"], epoch_layer)
-        time.sleep(60 * 60)
         analyse.analyze_mining(testconfig['namespace'], epoch_layer, layers_per_epoch, layer_avg_size, total_pods)
         validate_hare(current_index, ns)  # validate hare
         epochs += 1
