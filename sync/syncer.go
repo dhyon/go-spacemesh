@@ -348,7 +348,7 @@ func (s *Syncer) DataAvailabilty(blk *types.Block) ([]*types.AddressableSignedTr
 	}
 
 	s.Info("fetched all txs for block %v", blk.ID())
-	s.Info("fetched all atxs for block %v", blk.ID())
+	s.Info("fetched all atxs (total %v, unprocessed %v) for block %v", len(blk.AtxIds), len(atxs), blk.ID())
 
 	return txs, atxs, nil
 }
