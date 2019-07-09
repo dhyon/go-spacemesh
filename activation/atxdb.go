@@ -96,10 +96,10 @@ func (db *ActivationDb) CalcActiveSetFromView(a *types.ActivationTx) (uint32, er
 			db.log.Error("cannot validate atx, block %v not found", blkh.Id)
 			return err
 		}
-		//skip blocks not from atx epoch
-		if blk.LayerIndex.GetEpoch(db.LayersPerEpoch) != countingEpoch {
-			return nil
-		}
+		//skip blocks not from atx epoch - commenting out this optimization, trying to fix mismatch! bug
+		//if blk.LayerIndex.GetEpoch(db.LayersPerEpoch) != countingEpoch {
+		//	return nil
+		//}
 		for _, id := range blk.AtxIds {
 			if _, found := set[id]; found {
 				continue
