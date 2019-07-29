@@ -1,12 +1,15 @@
 package node
 
 import (
+	"context"
 	"fmt"
 	"github.com/spacemeshos/go-spacemesh/address"
+	"github.com/spacemeshos/go-spacemesh/amcl"
 	"github.com/spacemeshos/go-spacemesh/amcl/BLS381"
 	"github.com/spacemeshos/go-spacemesh/api"
 	apiCfg "github.com/spacemeshos/go-spacemesh/api/config"
 	"github.com/spacemeshos/go-spacemesh/common"
+	"github.com/spacemeshos/go-spacemesh/crypto"
 	"github.com/spacemeshos/go-spacemesh/eligibility"
 	"github.com/spacemeshos/go-spacemesh/log"
 	"github.com/spacemeshos/go-spacemesh/miner"
@@ -19,6 +22,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
+	"golang.org/x/sync/errgroup"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -83,61 +87,96 @@ func (suite *AppTestSuite) TearDownTest() {
 	}
 }
 
+func GenSeed() *amcl.RAND {
+	rng := amcl.NewRAND()
+	var raw [100]byte
+	rnd, _ := crypto.GetRandomBytes(100)
+	for i := 0; i < 100; i++ {
+		raw[i] = rnd[i]
+	}
+	rng.Seed(len(raw), raw[:])
+	return rng
+}
+
 func (suite *AppTestSuite) initMultipleInstances(numOfInstances int, storeFormat string) {
 	r := require.New(suite.T())
 
 	net := service.NewSimulator()
+	net.SetLogger(log.NewDefault("sim"))
 	runningName := 'a'
 	rolacle := eligibility.New()
 	poetClient, err := NewRPCPoetHarnessClient()
 	r.NoError(err)
 	suite.poetCleanup = poetClient.CleanUp
-	rng := BLS381.DefaultSeed()
+	var rngmtx sync.Mutex
+	rng := GenSeed()
+
+	genesisTime := time.Now().Add(time.Second * 10)
+
+	var mtx sync.Mutex
+
+	g, _ := errgroup.WithContext(context.Background())
+
 	for i := 0; i < numOfInstances; i++ {
-		smApp := NewSpacemeshApp()
+		runningName := runningName + rune(i)
+		g.Go(func() error {
+			smApp := NewSpacemeshApp()
 
-		smApp.Config.POST = nipst.DefaultConfig()
-		smApp.Config.POST.Difficulty = 5
-		smApp.Config.POST.NumProvenLabels = 10
-		smApp.Config.POST.SpacePerUnit = 1 << 10 // 1KB.
-		smApp.Config.POST.FileSize = 1 << 10     // 1KB.
+			smApp.Config.POST = nipst.DefaultConfig()
+			smApp.Config.POST.Difficulty = 5
+			smApp.Config.POST.NumProvenLabels = 10
+			smApp.Config.POST.SpacePerUnit = 1 << 10 // 1KB.
+			smApp.Config.POST.FileSize = 1 << 10     // 1KB.
 
-		smApp.Config.HARE.N = numOfInstances
-		smApp.Config.HARE.F = numOfInstances / 2
-		smApp.Config.HARE.RoundDuration = 3
-		smApp.Config.HARE.WakeupDelta = 10
-		smApp.Config.HARE.ExpectedLeaders = 5
-		smApp.Config.CoinbaseAccount = strconv.Itoa(i + 1)
-		smApp.Config.LayerAvgSize = numOfInstances
-		smApp.Config.LayersPerEpoch = 3
+			smApp.Config.HARE.N = numOfInstances
+			smApp.Config.HARE.F = numOfInstances / 2
+			smApp.Config.HARE.RoundDuration = 3
+			smApp.Config.HARE.WakeupDelta = 3
+			smApp.Config.HARE.ExpectedLeaders = 5
+			smApp.Config.CoinbaseAccount = strconv.Itoa(i + 1)
+			smApp.Config.LayerAvgSize = numOfInstances
+			smApp.Config.LayersPerEpoch = 4
+			smApp.Config.LayerDurationSec = 20
+			smApp.Config.GenesisTime = genesisTime.Format(time.RFC3339)
 
-		edSgn := signing.NewEdSigner()
-		pub := edSgn.PublicKey()
+			edSgn := signing.NewEdSigner()
+			pub := edSgn.PublicKey()
 
-		r.NoError(err)
-		vrfPriv, vrfPub := BLS381.GenKeyPair(rng)
-		vrfSigner := BLS381.NewBlsSigner(vrfPriv)
-		nodeID := types.NodeId{Key: pub.String(), VRFPublicKey: vrfPub}
+			r.NoError(err)
+			rngmtx.Lock()
+			vrfPriv, vrfPub := BLS381.GenKeyPair(rng)
+			vrfSigner := BLS381.NewBlsSigner(vrfPriv)
+			rngmtx.Unlock()
+			nodeID := types.NodeId{Key: pub.String(), VRFPublicKey: vrfPub}
 
-		swarm := net.NewNode()
-		dbStorepath := storeFormat + string(runningName)
+			swarm := net.NewNode()
+			fmt.Println("DB STORINGGG      ", runningName)
+			dbStorepath := storeFormat + string(runningName)
 
-		hareOracle := oracle.NewLocalOracle(rolacle, numOfInstances, nodeID)
-		hareOracle.Register(true, pub.String())
+			hareOracle := oracle.NewLocalOracle(rolacle, numOfInstances, nodeID)
+			hareOracle.Register(true, pub.String())
 
-		layerSize := numOfInstances
+			layerSize := numOfInstances
 
-		postClient := nipst.NewPostClient(&smApp.Config.POST)
+			postClient := nipst.NewPostClient(&smApp.Config.POST)
 
-		err = smApp.initServices(nodeID, swarm, dbStorepath, edSgn, false, hareOracle, uint32(layerSize), postClient, poetClient, vrfSigner, uint16(smApp.Config.LayersPerEpoch))
-		r.NoError(err)
-		smApp.setupGenesis()
-
-		suite.apps = append(suite.apps, smApp)
-		suite.dbs = append(suite.dbs, dbStorepath)
-		runningName++
+			err = smApp.initServices(nodeID, swarm, dbStorepath, edSgn, false, hareOracle, uint32(layerSize), postClient, poetClient, vrfSigner, uint16(smApp.Config.LayersPerEpoch))
+			if err != nil {
+				return err
+			}
+			smApp.setupGenesis()
+			mtx.Lock()
+			suite.apps = append(suite.apps, smApp)
+			suite.dbs = append(suite.dbs, dbStorepath)
+			mtx.Unlock()
+			log.Info("done with %v", nodeID.Key)
+			return nil
+		})
 	}
+	err = g.Wait()
+	r.NoError(err)
 	activateGrpcServer(suite.apps[0])
+	log.Info("Initialized all instances")
 }
 
 func activateGrpcServer(smApp *SpacemeshApp) {
@@ -148,6 +187,10 @@ func activateGrpcServer(smApp *SpacemeshApp) {
 
 func (suite *AppTestSuite) TestMultipleNodes() {
 	//EntryPointCreated <- true
+
+	//var ballast = make([]byte, 500000000)
+	//_ = ballast
+	//debug.SetGCPercent(-1)
 
 	const numberOfEpochs = 2 // first 2 epochs are genesis
 	//addr := address.BytesToAddress([]byte{0x01})
@@ -162,15 +205,23 @@ func (suite *AppTestSuite) TestMultipleNodes() {
 	}
 	txbytes, _ := types.SignedTransactionAsBytes(tx)
 	path := "../tmp/test/state_" + time.Now().String()
-	suite.initMultipleInstances(5, path)
+	suite.initMultipleInstances(10, path)
+	g, _ := errgroup.WithContext(context.Background())
 	for _, a := range suite.apps {
-		a.startServices()
+		a := a
+		g.Go(func() error {
+			a.startServices()
+			return nil
+		})
 	}
+	g.Wait()
+
+	log.Info("Started all instances")
 
 	defer suite.gracefulShutdown()
 
 	_ = suite.apps[0].P2P.Broadcast(miner.IncomingTxProtocol, txbytes)
-	timeout := time.After(4.5 * 60 * time.Second)
+	timeout := time.After(60 * 60 * time.Second)
 
 	stickyClientsDone := 0
 loop:
@@ -183,7 +234,7 @@ loop:
 			maxClientsDone := 0
 			for idx, app := range suite.apps {
 				if 10 == app.state.GetBalance(dst) &&
-					uint32(suite.apps[idx].mesh.LatestLayer()) == numberOfEpochs*uint32(suite.apps[idx].Config.LayersPerEpoch)+1 { // make sure all had 1 non-genesis layer
+					uint32(suite.apps[idx].mesh.LatestLayer()) >= numberOfEpochs*uint32(suite.apps[idx].Config.LayersPerEpoch)+1 { // make sure all had 1 non-genesis layer
 
 					suite.validateLastATXActiveSetSize(app)
 					clientsDone := 0
@@ -213,7 +264,7 @@ loop:
 		}
 	}
 
-	suite.validateBlocksAndATXs(8)
+	suite.validateBlocksAndATXs((4*3)-1)
 
 }
 
@@ -233,7 +284,7 @@ func (suite *AppTestSuite) validateBlocksAndATXs(untilLayer types.LayerID) {
 		for _, ap := range suite.apps {
 			curNodeLastLayer := ap.blockListener.ValidatedLayer()
 			if curNodeLastLayer < untilLayer {
-				log.Info("layer for %v was %v, want %v", ap.nodeId.Key, curNodeLastLayer, 8)
+				log.Info("layer for %v was %v, want %v", ap.nodeId.Key, curNodeLastLayer, untilLayer)
 			} else {
 				count++
 			}
@@ -318,8 +369,8 @@ func (suite *AppTestSuite) validateBlocksAndATXs(untilLayer types.LayerID) {
 		total_atxs += len(atxs)
 	}
 
-	assert.True(suite.T(), ((total_blocks-first_epoch_blocks)/(lastlayer-layers_per_epoch)) == layer_avg_size, fmt.Sprintf("not good num of blocks got: %v, want: %v. total_blocks: %v, first_epoch_blocks: %v, lastlayer: %v, layers_per_epoch: %v", (total_blocks-first_epoch_blocks)/(lastlayer-layers_per_epoch), layer_avg_size, total_blocks, first_epoch_blocks, lastlayer, layers_per_epoch))
-	assert.True(suite.T(), total_atxs == (lastlayer/layers_per_epoch)*len(suite.apps), fmt.Sprintf("not good num of atxs got: %v, want: %v", total_atxs, (lastlayer/layers_per_epoch)*len(suite.apps)))
+	require.True(suite.T(), ((total_blocks-first_epoch_blocks)/(lastlayer-layers_per_epoch)) == layer_avg_size, fmt.Sprintf("not good num of blocks got: %v, want: %v. total_blocks: %v, first_epoch_blocks: %v, lastlayer: %v, layers_per_epoch: %v", (total_blocks-first_epoch_blocks)/(lastlayer-layers_per_epoch), layer_avg_size, total_blocks, first_epoch_blocks, lastlayer, layers_per_epoch))
+	require.True(suite.T(), total_atxs == (lastlayer/layers_per_epoch)*len(suite.apps), fmt.Sprintf("not good num of atxs got: %v, want: %v", total_atxs, (lastlayer/layers_per_epoch)*len(suite.apps)))
 
 }
 

@@ -365,7 +365,7 @@ func (app *SpacemeshApp) initServices(nodeID types.NodeId, swarm service.Service
 		hOracle = rolacle
 	} else { // regular oracle, build and use it
 		beacon := eligibility.NewBeacon(trtl)
-		hOracle = eligibility.New(beacon, atxdb, BLS381.Verify2, vrfSigner, uint16(app.Config.LayersPerEpoch), lg.WithName("hareOracle"))
+		hOracle = eligibility.New(beacon, atxdb, BLS381.Verify2, vrfSigner, uint16(layersPerEpoch), lg.WithName("hareOracle"))
 	}
 
 	// a function to validate we know the blocks
@@ -385,10 +385,10 @@ func (app *SpacemeshApp) initServices(nodeID types.NodeId, swarm service.Service
 
 		return true
 	}
-	ha := hare.New(app.Config.HARE, swarm, sgn, nodeID, validationFunc, syncer.IsSynced, msh, hOracle, uint16(app.Config.LayersPerEpoch), idStore, atxdb, clock.Subscribe(), lg.WithName("hare"))
+	ha := hare.New(app.Config.HARE, swarm, sgn, nodeID, validationFunc, syncer.IsSynced, msh, hOracle, uint16(layersPerEpoch), idStore, atxdb, clock.Subscribe(), lg.WithName("hare"))
 
-	blockProducer := miner.NewBlockBuilder(nodeID, sgn, swarm, clock.Subscribe(), txpool, atxpool, coinToss, msh, ha, blockOracle, processor, atxdb, syncer, uint16(app.Config.LayersPerEpoch), lg.WithName("blockBuilder"))
-	blockListener := sync.NewBlockListener(swarm, syncer, 4, uint16(app.Config.LayersPerEpoch), lg.WithName("blockListener"))
+	blockProducer := miner.NewBlockBuilder(nodeID, sgn, swarm, clock.Subscribe(), txpool, atxpool, coinToss, msh, ha, blockOracle, processor, atxdb, syncer, uint16(layersPerEpoch), lg.WithName("blockBuilder"))
+	blockListener := sync.NewBlockListener(swarm, syncer, 4, uint16(layersPerEpoch), lg.WithName("blockListener"))
 
 	poetListener := activation.NewPoetListener(swarm, poetDb, lg.WithName("poetListener"))
 

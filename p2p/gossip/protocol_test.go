@@ -483,3 +483,8 @@ func TestHash(t *testing.T) {
 	assert.NotEqual(t, calcHash(msg1, prot1), calcHash(msg1, prot2))
 	assert.NotEqual(t, calcHash(msg1, prot1), calcHash(msg2, prot1))
 }
+
+
+func testDoubleCache(t *testing.T) {
+
+}
