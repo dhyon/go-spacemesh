@@ -18,8 +18,8 @@ type Tortoise interface {
 	GetGoodPattern(layer types.LayerID) (uint32, error)
 }
 
-func NewAlgorithm(layerSize int, mdb *mesh.MeshDB, lg log.Log) *Algorithm {
-	alg := &Algorithm{Tortoise: NewNinjaTortoise(layerSize, mdb, lg)}
+func NewAlgorithm(layerSize int, mdb *mesh.MeshDB, hdist int, lg log.Log) *Algorithm {
+	alg := &Algorithm{Tortoise: NewNinjaTortoise(layerSize, mdb, hdist, lg)}
 	alg.HandleIncomingLayer(mesh.GenesisLayer())
 	return alg
 }
