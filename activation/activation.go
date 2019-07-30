@@ -285,9 +285,9 @@ func (b *Builder) PublishActivationTx(epoch types.EpochId) (bool, error) {
 		return false, fmt.Errorf("failed to broadcast ATX: %v", err)
 	}
 
-	b.log.Event().Info(fmt.Sprintf("atx published! id: %v, prevATXID: %v, posATXID: %v, layer: %v, published in epoch: %v, active set: %v miner: %v view %v",
-		atx.ShortId(), atx.PrevATXId.ShortString(), atx.PositioningAtx.ShortString(), atx.PubLayerIdx,
-		atx.PubLayerIdx.GetEpoch(b.layersPerEpoch), atx.ActiveSetSize, b.nodeId.Key[:5], len(atx.View)))
+	b.log.Event().Info("atx published",
+		log.AtxId(atx.ShortId()), log.String("prev_atx_id", atx.PrevATXId.ShortString()), log.String("pos_atx_id", atx.PositioningAtx.ShortString()), log.LayerId(uint64(atx.PubLayerIdx)),
+		log.EpochId(uint64(atx.PubLayerIdx.GetEpoch(b.layersPerEpoch))), log.Uint32("active_set_size", atx.ActiveSetSize), log.NodeId(b.nodeId.Key[:5]), log.Int("view_len", len(atx.View)))
 	return true, nil
 }
 
