@@ -278,7 +278,7 @@ func (b *Builder) PublishActivationTx(epoch types.EpochId) (bool, error) {
 	b.challenge = nil
 	b.posLayerID = 0
 
-	time.Sleep(10 * time.Second)
+	time.Sleep(20 * time.Second)
 	err = b.net.Broadcast(AtxProtocol, buf)
 	if err != nil {
 		return false, err
