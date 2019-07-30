@@ -89,6 +89,10 @@ func (m *MockPeerStore) Size() int {
 	return m.updateCount
 }
 
+func (m *MockPeerStore) Shutdown() {
+
+}
+
 // mockAddrBook
 type mockAddrBook struct {
 	addAddressFunc func(n, src *node.NodeInfo)

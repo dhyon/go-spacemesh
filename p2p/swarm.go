@@ -387,6 +387,7 @@ func (s *swarm) Shutdown() {
 	s.network.Shutdown()
 	s.cPool.Shutdown()
 	s.udpServer.Shutdown()
+	s.discover.Shutdown()
 
 	s.protocolHandlerMutex.Lock()
 	for i, _ := range s.directProtocolHandlers {
@@ -677,7 +678,12 @@ func (s *swarm) askForMorePeers() {
 	// if we could'nt get any maybe were initializing
 	// wait a little bit before trying again
 	time.Sleep(NoResultsInterval)
-	s.morePeersReq <- struct{}{}
+	select {
+	case s.morePeersReq <- struct{}{}:
+		return
+	case <-s.shutdown:
+		return
+	}
 }
 
 // getMorePeers tries to fill the `peers` slice with dialed outbound peers that we selected from the discovery.

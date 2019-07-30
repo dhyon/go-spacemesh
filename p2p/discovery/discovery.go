@@ -18,6 +18,7 @@ type PeerStore interface {
 	SelectPeers(qty int) []*node.NodeInfo
 	Bootstrap(ctx context.Context) error
 	Size() int
+	Shutdown()
 	SetLocalAddresses(tcp, udp int)
 }
 
@@ -106,6 +107,10 @@ func New(ln *node.LocalNode, config config.SwarmConfig, service server.Service) 
 	d.bootstrapper = newRefresher(d.rt, d.disc, bn, ln.Log)
 
 	return d
+}
+
+func (d *Discovery) Shutdown() {
+	d.rt.Stop()
 }
 
 // SetLocalAddresses sets the local addresses to be advertised.
