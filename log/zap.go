@@ -42,9 +42,9 @@ func (l Log) Panic(format string, args ...interface{}) {
 	l.sugar.Panicf(format, args...)
 }
 
-func (l Log) Time(start time.Time, context string) {
+func (l Log) Time(start time.Time, method string, context string) {
 	elapsed := time.Since(start)
-	l.Info("running %s took %v", context, elapsed)
+	l.With().Info(fmt.Sprintf("running %s", method), String("context", context), Duration("took", elapsed))
 }
 
 // Wrap and export field logic

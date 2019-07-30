@@ -8,6 +8,7 @@ import (
 	"github.com/spacemeshos/go-spacemesh/rand"
 	"github.com/spacemeshos/go-spacemesh/types"
 	"sync/atomic"
+	"time"
 )
 
 const AtxProtocol = "AtxGossip"
@@ -277,15 +278,15 @@ func (b *Builder) PublishActivationTx(epoch types.EpochId) (bool, error) {
 	b.challenge = nil
 	b.posLayerID = 0
 
-	//time.Sleep(5 * time.Second)
+	time.Sleep(10 * time.Second)
 	err = b.net.Broadcast(AtxProtocol, buf)
 	if err != nil {
 		return false, err
 	}
 
-	b.log.With().EventInfo(fmt.Sprintf("atx published! id: %v, prevATXID: %v, posATXID: %v, layer: %v, published in epoch: %v, active set: %v miner: %v view %v",
-		atx.ShortId(), atx.PrevATXId.ShortString(), atx.PositioningAtx.ShortString(), atx.PubLayerIdx,
-		atx.PubLayerIdx.GetEpoch(b.layersPerEpoch), atx.ActiveSetSize, b.nodeId.Key[:5], len(atx.View)))
+	b.log.With().EventInfo("atx published",
+		log.AtxId(atx.ShortId()), log.String("prev_atx_id", atx.PrevATXId.ShortString()), log.String("pos_atx_id", atx.PositioningAtx.ShortString()), log.LayerId(uint64(atx.PubLayerIdx)),
+		log.EpochId(uint64(atx.PubLayerIdx.GetEpoch(b.layersPerEpoch))), log.Uint32("active_set_size", atx.ActiveSetSize), log.NodeId(b.nodeId.Key[:5]), log.Int("view_len", len(atx.View)))
 	return true, nil
 }
 
