@@ -645,12 +645,15 @@ func (s *swarm) startNeighborhood() error {
 }
 
 func (s *swarm) peersLoop() {
+	var moreLock uint32 = 0
 loop:
 	for {
 		select {
 		case <-s.morePeersReq:
 			s.lNode.Debug("loop: got morePeersReq")
-			go s.askForMorePeers()
+			if atomic.CompareAndSwapUint32(&moreLock, 0, 1) {
+				go s.askForMorePeers(&moreLock)
+			}
 		//todo: try getting the connections (heartbeat)
 		case <-s.shutdown:
 			break loop // maybe error ?
@@ -658,7 +661,9 @@ loop:
 	}
 }
 
-func (s *swarm) askForMorePeers() {
+func (s *swarm) askForMorePeers(doneFlag *uint32) {
+	defer atomic.StoreUint32(doneFlag, 0)
+
 	s.outpeersMutex.RLock()
 	numpeers := len(s.outpeers)
 	s.outpeersMutex.RUnlock()
@@ -669,8 +674,11 @@ func (s *swarm) askForMorePeers() {
 
 	s.getMorePeers(req)
 
+	s.outpeersMutex.RLock()
+	numpeers = len(s.outpeers)
+	s.outpeersMutex.RUnlock()
 	// todo: better way then going in this every time ?
-	if len(s.outpeers) >= s.config.SwarmConfig.RandomConnections {
+	if numpeers >= s.config.SwarmConfig.RandomConnections {
 		s.initOnce.Do(func() {
 			s.lNode.Info("gossip; connected to initial required neighbors - %v", len(s.outpeers))
 			close(s.initial)
