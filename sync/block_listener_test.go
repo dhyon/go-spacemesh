@@ -178,6 +178,7 @@ func TestBlockListenerViewTraversal(t *testing.T) {
 	byts, _ := types.InterfaceToBytes(atx)
 	var atx1 types.ActivationTx
 	types.BytesToInterface(byts, &atx1)
+	atx1.CalcAndSetId()
 
 	bl1.ProcessAtx(atx)
 	bl2.ProcessAtx(&atx1)
@@ -312,6 +313,7 @@ func TestBlockListener_TraverseViewBadFlow(t *testing.T) {
 	byts, _ := types.InterfaceToBytes(atx)
 	var atx1 types.ActivationTx
 	types.BytesToInterface(byts, &atx1)
+	atx1.CalcAndSetId()
 
 	bl1.ProcessAtx(atx)
 	bl2.ProcessAtx(&atx1)
