@@ -8,7 +8,7 @@ dt = datetime.now()
 todaydate = dt.strftime("%Y.%m.%d")
 current_index = 'kubernetes_cluster-' + todaydate
 
-LAYERS_PER_EPOCH = 3
+LAYERS_PER_EPOCH = 5
 
 
 class ESQuery():
@@ -89,7 +89,7 @@ def main():
     # 2. Count "atx published"
     atxs = get_atx_published_in_epoch(namespace, epoch_to_monitor)
     num_published_atx = len(atxs)
-    assert(num_published_atx == expected_atxs), "Number of ATX published  not expected"
+    assert(num_published_atx == expected_atxs), "Number of ATX published: %d  not as expected %d" % (num_published_atx, expected_atxs)
     print("Num of published atx: {0}".format(num_published_atx))
 
     start_epoch_layer = (epoch_to_monitor*LAYERS_PER_EPOCH)+1
