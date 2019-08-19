@@ -4,10 +4,7 @@ from datetime import datetime, timedelta
 from elasticsearch_dsl import Search, Q
 from tests.queries import ES, get_latest_layer
 
-dt = datetime.now()
-todaydate = dt.strftime("%Y.%m.%d")
-current_index = 'kubernetes_cluster-' + todaydate
-
+INDEX = 'kubernetes_spacemesh'
 LAYERS_PER_EPOCH = 5
 
 
@@ -51,7 +48,7 @@ class ESQuery():
 def get_latest_layer_released_ticks(namespace):
 
     block_fields = {"M": "release tick"}
-    hit = ESQuery(current_index, namespace).get_latest(block_fields)
+    hit = ESQuery(INDEX, namespace).get_latest(block_fields)
     return hit.layer_id,  hit.T
 
 
@@ -60,19 +57,19 @@ def get_layer_released_ticks(namespace, layer_id=False):
         block_fields = {"M": "release tick"}
     else:
         block_fields = {"M": "release tick", "layer_id": layer_id}
-    hits = ESQuery(current_index, namespace).get_all(block_fields)
+    hits = ESQuery(INDEX, namespace).get_all(block_fields)
     return hits
 
 
 def count_atx_published_in_epoch(namespace, epoch_id):
     fields = {"M": "atx published", "epoch_id": epoch_id}
-    num_of_hits = ESQuery(current_index, namespace).count(fields)
+    num_of_hits = ESQuery(INDEX, namespace).count(fields)
     return num_of_hits
 
 
 def get_atx_published_in_epoch(namespace, epoch_id):
     fields = {"M": "atx published", "epoch_id": epoch_id}
-    hits = ESQuery(current_index, namespace).get_all(fields)
+    hits = ESQuery(INDEX, namespace).get_all(fields)
     return hits
 
 
