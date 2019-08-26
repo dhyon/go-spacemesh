@@ -198,6 +198,7 @@ func (s *swarm) onNewConnection(nce net.NewConnectionEvent) {
 func (s *swarm) onClosedConnection(cwe net.ConnectionWithErr) {
 	// we don't want to block, we know this node's connection was closed.
 	// todo: consider recconnecting
+	s.lNode.With().Info("disconnecting peer", log.String("peer", cwe.Conn.RemotePublicKey().String()), log.Err(cwe.Err))
 	s.Disconnect(cwe.Conn.RemotePublicKey())
 }
 
@@ -554,7 +555,7 @@ func (s *swarm) ProcessDirectProtocolMessage(sender p2pcrypto.PublicKey, protoco
 
 // ProcessGossipProtocolMessage passes an already decrypted message to a protocol. It is expected that the protocol will send
 // the message syntactic validation result on the validationCompletedChan ASAP
-func (s *swarm) ProcessGossipProtocolMessage(sender p2pcrypto.PublicKey, protocol string, data service.Data, validationCompletedChan chan service.MessageValidation) error {
+func (s *swarm) ProcessGossipProtocolMessage(sender p2pcrypto.PublicKey, protocol string, data service.Data, h [12]byte, validationCompletedChan chan service.MessageValidation) error {
 	// route authenticated message to the registered protocol
 	s.protocolHandlerMutex.RLock()
 	msgchan := s.gossipProtocolHandlers[protocol]
@@ -564,7 +565,7 @@ func (s *swarm) ProcessGossipProtocolMessage(sender p2pcrypto.PublicKey, protoco
 	}
 	s.lNode.Debug("Forwarding message to %v protocol", protocol)
 
-	msgchan <- gossipProtocolMessage{sender, data, validationCompletedChan}
+	msgchan <- gossipProtocolMessage{s.lNode.Log, sender, data, h,validationCompletedChan}
 
 	return nil
 }

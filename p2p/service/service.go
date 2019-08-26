@@ -57,7 +57,7 @@ type Service interface {
 	SendMessage(peerPubkey p2pcrypto.PublicKey, protocol string, payload []byte) error
 	SubscribePeerEvents() (new chan p2pcrypto.PublicKey, del chan p2pcrypto.PublicKey)
 	ProcessDirectProtocolMessage(sender p2pcrypto.PublicKey, protocol string, payload Data, metadata P2PMetadata) error
-	ProcessGossipProtocolMessage(sender p2pcrypto.PublicKey, protocol string, data Data, validationCompletedChan chan MessageValidation) error
+	ProcessGossipProtocolMessage(sender p2pcrypto.PublicKey, protocol string, data Data, h [12]byte, validationCompletedChan chan MessageValidation) error
 	Broadcast(protocol string, payload []byte) error
 	Shutdown()
 }

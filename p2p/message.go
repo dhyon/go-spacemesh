@@ -3,6 +3,8 @@ package p2p
 import (
 	"errors"
 	"fmt"
+	"github.com/spacemeshos/go-spacemesh/common"
+	"github.com/spacemeshos/go-spacemesh/log"
 	"github.com/spacemeshos/go-spacemesh/p2p/p2pcrypto"
 	"github.com/spacemeshos/go-spacemesh/p2p/service"
 )
@@ -30,9 +32,16 @@ func (pm directProtocolMessage) Bytes() []byte {
 }
 
 type gossipProtocolMessage struct {
+	log.Log
+
 	sender         p2pcrypto.PublicKey
 	data           service.Data
+	hash           [12]byte
 	validationChan chan service.MessageValidation
+}
+
+func (pm gossipProtocolMessage) Hash() [12]byte {
+	return pm.hash
 }
 
 func (pm gossipProtocolMessage) Sender() p2pcrypto.PublicKey {
@@ -53,6 +62,7 @@ func (pm gossipProtocolMessage) ValidationCompletedChan() chan service.MessageVa
 
 func (pm gossipProtocolMessage) ReportValidation(protocol string) {
 	if pm.validationChan != nil {
+		pm.With().Info("report validation", log.String("protocol", protocol), log.String("hash", common.Bytes2Hex(pm.hash[:])))
 		pm.validationChan <- service.NewMessageValidation(pm.sender, pm.Bytes(), protocol)
 	}
 }

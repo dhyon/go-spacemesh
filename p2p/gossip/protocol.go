@@ -70,7 +70,7 @@ type baseNetwork interface {
 	SendMessage(peerPubkey p2pcrypto.PublicKey, protocol string, payload []byte) error
 	RegisterDirectProtocol(protocol string) chan service.DirectMessage
 	SubscribePeerEvents() (conn chan p2pcrypto.PublicKey, disc chan p2pcrypto.PublicKey)
-	ProcessGossipProtocolMessage(sender p2pcrypto.PublicKey, protocol string, data service.Data, validationCompletedChan chan service.MessageValidation) error
+	ProcessGossipProtocolMessage(sender p2pcrypto.PublicKey, protocol string, data service.Data, h [12]byte, validationCompletedChan chan service.MessageValidation) error
 }
 
 // Protocol is the gossip protocol
@@ -144,6 +144,9 @@ func (prot *Protocol) propagateMessage(payload []byte, h hash, nextProt string, 
 	prot.peersMutex.RLock()
 	peers := make([]p2pcrypto.PublicKey, 0, len(prot.peers))
 	for p := range prot.peers {
+		if nextProt == "AtxGossip" {
+			prot.Log.With().Info("collecting peer", log.String("hash", common.Bytes2Hex(h[:])), log.String("protocol", nextProt), log.String("peer", p.String()))
+		}
 		peers = append(peers, p)
 	}
 	prot.peersMutex.RUnlock()
@@ -156,9 +159,12 @@ peerLoop:
 		wg.Add(1)
 		go func(pubkey p2pcrypto.PublicKey) {
 			// TODO: replace peer ?
+			prot.With().Info("about to send message to peer", log.String("hash", common.Bytes2Hex(h[:])), log.String("protocol", nextProt), log.String("peer", pubkey.String()))
 			err := prot.net.SendMessage(pubkey, nextProt, payload)
 			if err != nil {
-				prot.Warning("Failed sending msg %v to %v, reason=%v", h, pubkey, err)
+				prot.With().Warning("Failed sending msg", log.String("hash", common.Bytes2Hex(h[:])), log.String("protocol", nextProt), log.String("peer", pubkey.String()), log.Err(err))
+			} else {
+				prot.With().Info("sent message to peer", log.String("hash", common.Bytes2Hex(h[:])), log.String("protocol", nextProt), log.String("peer", pubkey.String()))
 			}
 			wg.Done()
 		}(p)
@@ -168,7 +174,8 @@ peerLoop:
 
 // Broadcast is the actual broadcast procedure - process the message internally and loop on peers and add the message to their queues
 func (prot *Protocol) Broadcast(payload []byte, nextProt string) error {
-	prot.Log.Debug("Broadcasting message from type %s", nextProt)
+	h := calcHash(payload, nextProt)
+	prot.Log.With().Info("Broadcasting message", log.String("hash", common.Bytes2Hex(h[:])), log.String("protocol", nextProt))
 	return prot.processMessage(prot.localNodePubkey, nextProt, service.DataBytes{Payload: payload})
 	//todo: should this ever return error ? then when processMessage should return error ?. should it block?
 }
@@ -183,12 +190,14 @@ func (prot *Protocol) Start() {
 func (prot *Protocol) addPeer(peer p2pcrypto.PublicKey) {
 	prot.peersMutex.Lock()
 	prot.peers[peer] = newPeer(prot.net, peer, prot.Log)
+	prot.Log.With().Info("adding peer", log.String("peer", peer.String()))
 	prot.peersMutex.Unlock()
 }
 
 func (prot *Protocol) removePeer(peer p2pcrypto.PublicKey) {
 	prot.peersMutex.Lock()
 	delete(prot.peers, peer)
+	prot.Log.With().Info("deleting peer", log.String("peer", peer.String()))
 	prot.peersMutex.Unlock()
 }
 
@@ -205,9 +214,9 @@ func (prot *Protocol) processMessage(sender p2pcrypto.PublicKey, protocol string
 		return nil
 	}
 
-	prot.Log.Event().Debug("new_gossip_message", log.String("from", sender.String()), log.String("protocol", protocol), log.String("hash", common.Bytes2Hex(h[:])))
+	prot.Log.Event().Info("new_gossip_message", log.String("from", sender.String()), log.String("protocol", protocol), log.String("hash", common.Bytes2Hex(h[:])))
 	metrics.NewGossipMessages.With("protocol", protocol).Add(1)
-	return prot.net.ProcessGossipProtocolMessage(sender, protocol, msg, prot.propagateQ)
+	return prot.net.ProcessGossipProtocolMessage(sender, protocol, msg, h, prot.propagateQ)
 }
 
 func (prot *Protocol) propagationEventLoop() {
@@ -217,7 +226,11 @@ loop:
 		select {
 		case msgV := <-prot.propagateQ:
 			h := calcHash(msgV.Message(), msgV.Protocol())
-			prot.Log.With().Debug("new_gossip_message_relay", log.String("protocol", msgV.Protocol()), log.String("hash", common.Bytes2Hex(h[:])))
+			if msgV.Protocol() == "AtxGossip" {
+				prot.Log.With().Info("new_gossip_message_relay", log.String("protocol", msgV.Protocol()), log.String("hash", common.Bytes2Hex(h[:])))
+			} else {
+				prot.Log.With().Info("new_gossip_message_relay", log.String("protocol", msgV.Protocol()), log.String("hash", common.Bytes2Hex(h[:])))
+			}
 			prot.propagateMessage(msgV.Message(), h, msgV.Protocol(), msgV.Sender())
 		case <-prot.shutdown:
 			err = errors.New("protocol shutdown")

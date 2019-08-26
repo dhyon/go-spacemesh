@@ -101,7 +101,7 @@ func (mbn *mockBaseNetwork) ProcessDirectProtocolMessage(sender p2pcrypto.Public
 	return nil
 }
 
-func (mbn *mockBaseNetwork) ProcessGossipProtocolMessage(sender p2pcrypto.PublicKey, protocol string, data service.Data, validationCompletedChan chan service.MessageValidation) error {
+func (mbn *mockBaseNetwork) ProcessGossipProtocolMessage(sender p2pcrypto.PublicKey, protocol string, data service.Data, h [12]byte, validationCompletedChan chan service.MessageValidation) error {
 	mbn.processProtocolCount++
 	if validationCompletedChan != nil {
 		validationCompletedChan <- service.NewMessageValidation(sender, data.Bytes(), protocol)
@@ -451,6 +451,24 @@ func TestNeighborhood_Disconnect(t *testing.T) {
 	require.NoError(t, n.Relay(pk2, "protocol", service.DataBytes{[]byte("LOL2")}))
 	assert.Equal(t, 2, net.processProtocolCount)
 	assert.Equal(t, 3, net.totalMessageSent())
+}
+
+func TestNeighborhood_PropagateMessage(t *testing.T) {
+	net := newMockBaseNetwork()
+	local := newPubkey(t)
+	n := NewProtocol(config.DefaultConfig().SwarmConfig, net, local, log.New("tesT", "", ""))
+
+	n.Start()
+	pub1 := p2pcrypto.NewRandomPubkey()
+	n.addPeer(pub1)
+	pub2 := p2pcrypto.NewRandomPubkey()
+	n.addPeer(pub2)
+	net.msgwg.Add(2)
+
+	n.propagateMessage([]byte("LOL"), hash{5}, "AtxGossip", local)
+	assert.Equal(t, 2, net.totalMessageSent())
+	assert.Equal(t, uint32(1), net.msgSentByPeer[pub1.String()])
+	assert.Equal(t, uint32(1), net.msgSentByPeer[pub2.String()])
 }
 
 func TestHash(t *testing.T) {
