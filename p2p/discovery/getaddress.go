@@ -16,8 +16,21 @@ func (p *protocol) newGetAddressesRequestHandler() func(msg server.Message) []by
 	return func(msg server.Message) []byte {
 		p.logger.Debug("Got a get_address request from %v", msg.Sender().String())
 
-		// TODO: if we don't know who is that peer (a.k.a first time we hear from this address)
-		// 		 we must ensure that he's indeed listening on that address = check last pong
+		// If we don't know who is that peer (a.k.a first time we hear from this address)
+		// we must ensure that he's indeed listening on that address = check last pong
+		ka, err := p.table.LookupKnownAddress(msg.Sender())
+		if err != nil {
+			p.logger.Error("Error looking up message sender (GetAddress): %v", msg.Sender())
+			return nil
+		}
+		// Check if we've pinged this peer recently enough
+		if ka.NeedsPing() {
+			if err := p.Ping(msg.Sender()); err != nil {
+				p.logger.Error("Error pinging peer (GetAddress): %v", msg.Sender())
+				return nil
+			}
+		}
+		p.logger.Debug("Passed ping check, recently pinged Peer %v", msg.Sender())
 
 		results := p.table.AddressCache()
 		// remove the sender from the list
